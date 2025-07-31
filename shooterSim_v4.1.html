@@ -1,0 +1,730 @@
+<!DOCTYPE html><html lang="en"><head><meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://code.jquery.com https://unpkg.com https://d3js.org https://threejs.org https://cdn.plot.ly https://stackpath.bootstrapcdn.com https://maps.googleapis.com https://cdn.tailwindcss.com https://ajax.googleapis.com https://kit.fontawesome.com https://cdn.datatables.net https://maxcdn.bootstrapcdn.com https://code.highcharts.com https://tako-static-assets-production.s3.amazonaws.com https://www.youtube.com https://fonts.googleapis.com https://fonts.gstatic.com https://pfst.cf2.poecdn.net https://puc.poecdn.net https://i.imgur.com https://wikimedia.org https://*.icons8.com https://*.giphy.com https://picsum.photos https://images.unsplash.com; frame-src 'self' https://www.youtube.com https://trytako.com; child-src 'self'; manifest-src 'self'; worker-src 'self'; upgrade-insecure-requests; block-all-mixed-content;">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Mobile Turntable Shooter Simulator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'dark-bg': '#1a1f2e',
+                        'card-bg': '#2d3748',
+                        'primary': '#5D5CDE'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #1a1f2e;
+            color: #e2e8f0;
+        }
+        #canvas-container {
+            border: 2px solid #374151;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .control-button {
+            @apply bg-primary hover:bg-purple-600 text-white font-semibold py-2 px-4 rounded transition duration-200 mr-2;
+        }
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        .status-ready { background-color: #10b981; }
+        .status-moving { background-color: #f59e0b; }
+        .status-shooting { background-color: #ef4444; }
+        .status-complete { background-color: #6366f1; }
+    </style>
+</head>
+<body class="p-4">
+    <div class="max-w-7xl mx-auto">
+        <h1 class="text-3xl font-bold text-center mb-8 text-white">3D Mobile Turntable Shooter Simulator</h1>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <!-- Parameters Panel -->
+            <div class="bg-card-bg rounded-lg p-6">
+                <h2 class="text-xl font-semibold mb-4 text-white">Shooter Parameters</h2>
+                
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Flywheel Diameter (cm)</label>
+                        <input type="number" id="flywheelDiameter" value="48" step="0.1" class="w-full p-2 bg-gray-700 rounded border text-base">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Upper Row RPM</label>
+                        <input type="number" id="upperRPM" value="3000" step="10" class="w-full p-2 bg-gray-700 rounded border text-base">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Lower Row RPM</label>
+                        <input type="number" id="lowerRPM" value="1500" step="10" class="w-full p-2 bg-gray-700 rounded border text-base">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Projectile Diameter (cm)</label>
+                        <input type="number" id="projectileDiameter" value="2.4" step="0.1" class="w-full p-2 bg-gray-700 rounded border text-base">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Projectile Mass (g)</label>
+                        <input type="number" id="projectileMass" value="27" step="0.1" class="w-full p-2 bg-gray-700 rounded border text-base">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Shooter Angle (degrees)</label>
+                        <input type="number" id="shooterAngle" value="35" step="1" min="-30" max="90" class="w-full p-2 bg-gray-700 rounded border text-base">
+                        <p class="text-xs text-gray-400 mt-1">Elevation angle: 0° = horizontal, 90° = vertical up</p>
+                    </div>
+                    
+                    <hr class="border-gray-600">
+                    <h3 class="text-lg font-semibold text-yellow-400">Chassis Settings</h3>
+                    
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Turntable Height (cm)</label>
+                        <input type="number" id="turntableHeight" value="80" step="1" class="w-full p-2 bg-gray-700 rounded border text-base">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Chassis Speed (m/s)</label>
+                        <input type="number" id="chassisSpeed" value="2.0" step="0.1" class="w-full p-2 bg-gray-700 rounded border text-base">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Chassis Direction (degrees)</label>
+                        <input type="number" id="chassisDirection" value="0" step="1" min="-180" max="180" class="w-full p-2 bg-gray-700 rounded border text-base">
+                        <p class="text-xs text-gray-400 mt-1">0° = forward, 90° = left, -90° = right</p>
+                    </div>
+                    
+                    <hr class="border-gray-600">
+                    <h3 class="text-lg font-semibold text-green-400">Target Settings</h3>
+                    
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Goal Distance (m)</label>
+                        <input type="number" id="goalDistance" value="5" step="0.1" class="w-full p-2 bg-gray-700 rounded border text-base">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Goal Height (cm)</label>
+                        <input type="number" id="goalHeight" value="200" step="1" class="w-full p-2 bg-gray-700 rounded border text-base">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Goal Opening Height (cm)</label>
+                        <input type="number" id="goalOpeningHeight" value="40" step="1" class="w-full p-2 bg-gray-700 rounded border text-base">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 3D Visualization -->
+            <div class="lg:col-span-3 bg-card-bg rounded-lg p-6">
+                <h2 class="text-xl font-semibold mb-4 text-white">3D Visualization</h2>
+                
+                <!-- Animation Controls -->
+                <div class="mb-4 flex flex-wrap items-center">
+                    <button id="startBtn" class="control-button">Start Animation</button>
+                    <button id="pauseBtn" class="control-button">Pause</button>
+                    <button id="resetBtn" class="control-button">Reset</button>
+                    
+                    <div class="ml-4 flex items-center">
+                        <span class="text-sm text-gray-300 mr-2">Status:</span>
+                        <div class="status-indicator status-ready" id="statusIndicator"></div>
+                        <span id="statusText" class="text-sm text-gray-300">Ready</span>
+                    </div>
+                    
+                    <div class="ml-4 flex items-center">
+                        <span class="text-sm text-gray-300 mr-2">Time:</span>
+                        <span id="timeDisplay" class="text-sm text-yellow-400">0.00s</span>
+                    </div>
+                </div>
+                
+                <div id="canvas-container" class="w-full h-96 bg-gray-900 relative">
+                    <!-- 3D canvas will be inserted here -->
+                </div>
+                
+                <div class="mt-4 text-sm text-gray-400">
+                    <p><strong>Controls:</strong> Left click + drag to rotate camera, Right click + drag to pan, Scroll to zoom</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Simulation Results -->
+        <div class="mt-6 bg-card-bg rounded-lg p-6">
+            <h2 class="text-xl font-semibold mb-4 text-white">Simulation Results</h2>
+            <div id="results" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <!-- Results will be populated here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let scene, camera, renderer, controls;
+        let chassis, turntable, shooter, projectile, goal, trajectoryLine;
+        let animationId;
+        let isAnimating = false;
+        let animationTime = 0;
+        let trajectoryData = [];
+        let chassisStartPosition = { x: 0, z: 0 };
+        let shootTime = 1.0; // Time when shot is fired (after 1 second of movement)
+        
+        // Physics constants
+        const g = 9.81;
+        const airDensity = 1.225;
+        const dragCoefficient = 0.47;
+        
+        class TurntableShooterSimulator {
+            constructor() {
+                this.trajectory = [];
+                this.timeStep = 0.001;
+            }
+            
+            calculateInitialVelocity(params, chassisVelocityAtShot) {
+                const {
+                    flywheelDiameter, upperRPM, lowerRPM, turntableHeight,
+                    goalDistance, goalHeight, shooterAngle
+                } = params;
+                
+                // Convert cm to m and RPM to rad/s
+                const radius = (flywheelDiameter / 100) / 2;
+                const upperAngularVel = (upperRPM * 2 * Math.PI) / 60;
+                const lowerAngularVel = (lowerRPM * 2 * Math.PI) / 60;
+                
+                // Average tangential velocity from flywheels
+                const shooterSpeed = (upperAngularVel + lowerAngularVel) * radius / 2;
+                
+                // Convert shooter angle to radians
+                const shooterAngleRad = (shooterAngle * Math.PI) / 180;
+                
+                // Shooter velocity components relative to turntable orientation
+                // Turntable faces goal, shooter has elevation angle
+                const shooterVx = shooterSpeed * Math.cos(shooterAngleRad); // Horizontal component toward goal
+                const shooterVy = shooterSpeed * Math.sin(shooterAngleRad); // Vertical component from angle
+                const shooterVz = 0; // No Z component (shooter points toward goal)
+                
+                // Add chassis velocity at time of shot
+                const totalVx = shooterVx + chassisVelocityAtShot.x;
+                const totalVy = shooterVy + chassisVelocityAtShot.y;
+                const totalVz = shooterVz + chassisVelocityAtShot.z;
+                
+                const totalSpeed = Math.sqrt(totalVx * totalVx + totalVy * totalVy + totalVz * totalVz);
+                
+                // Spin rate
+                const spinRate = ((upperRPM - lowerRPM) * 2 * Math.PI) / 60;
+                
+                return {
+                    vx: totalVx,
+                    vy: totalVy,
+                    vz: totalVz,
+                    speed: totalSpeed,
+                    spinRate,
+                    shooterSpeed,
+                    shooterAngle: shooterAngle
+                };
+            }
+            
+            calculateForces(vx, vy, vz, mass, diameter, spinRate) {
+                const speed = Math.sqrt(vx * vx + vy * vy + vz * vz);
+                if (speed < 0.001) return { fx: 0, fy: -g, fz: 0 };
+                
+                const radius = (diameter / 100) / 2;
+                const area = Math.PI * radius * radius;
+                
+                // Drag force
+                const dragMagnitude = 0.5 * dragCoefficient * airDensity * area * speed * speed;
+                const dragX = -dragMagnitude * (vx / speed);
+                const dragY = -dragMagnitude * (vy / speed);
+                const dragZ = -dragMagnitude * (vz / speed);
+                
+                // Magnus force (simplified for horizontal shooter)
+                const magnusCoeff = 0.25;
+                const magnusMagnitude = 0.5 * magnusCoeff * airDensity * area * Math.abs(spinRate) * speed;
+                
+                // Magnus force perpendicular to velocity in XY plane
+                const magnusX = -magnusMagnitude * (vy / speed) * Math.sign(spinRate);
+                const magnusY = magnusMagnitude * (vx / speed) * Math.sign(spinRate);
+                const magnusZ = 0; // No Z component for horizontal shooter
+                
+                // Total forces
+                const fx = (dragX + magnusX) / mass;
+                const fy = -g + (dragY + magnusY) / mass;
+                const fz = (dragZ + magnusZ) / mass;
+                
+                return { fx, fy, fz };
+            }
+            
+            simulate(params, chassisVelocityAtShot, shootPosition) {
+                const { projectileDiameter, projectileMass, turntableHeight } = params;
+                
+                const mass = projectileMass / 1000;
+                const startHeight = turntableHeight / 100;
+                
+                // Initial conditions
+                const initial = this.calculateInitialVelocity(params, chassisVelocityAtShot);
+                let { vx, vy, vz, spinRate } = initial;
+                
+                // Start position is where chassis was when shot was fired
+                let x = shootPosition.x;
+                let y = startHeight;
+                let z = shootPosition.z;
+                let t = 0;
+                
+                this.trajectory = [];
+                let hitGround = false;
+                let maxHeight = startHeight;
+                
+                // Simulation loop
+                while (!hitGround && t < 10) {
+                    this.trajectory.push({ x, y, z, t, vx, vy, vz, speed: Math.sqrt(vx*vx + vy*vy + vz*vz) });
+                    
+                    const forces = this.calculateForces(vx, vy, vz, mass, projectileDiameter, spinRate);
+                    
+                    vx += forces.fx * this.timeStep;
+                    vy += forces.fy * this.timeStep;
+                    vz += forces.fz * this.timeStep;
+                    
+                    x += vx * this.timeStep;
+                    y += vy * this.timeStep;
+                    z += vz * this.timeStep;
+                    
+                    maxHeight = Math.max(maxHeight, y);
+                    
+                    if (y <= 0) {
+                        hitGround = true;
+                    }
+                    
+                    t += this.timeStep;
+                }
+                
+                return {
+                    trajectory: this.trajectory,
+                    initialData: initial,
+                    maxHeight,
+                    flightTime: t
+                };
+            }
+        }
+        
+        function initThreeJS() {
+            const container = document.getElementById('canvas-container');
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+            
+            // Scene setup
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x1a1f2e);
+            
+            // Camera setup
+            camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
+            camera.position.set(8, 6, 8);
+            
+            // Renderer setup
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(width, height);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            container.appendChild(renderer.domElement);
+            
+            // Controls
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0x404040, 0.4);
+            scene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(10, 10, 5);
+            directionalLight.castShadow = true;
+            directionalLight.shadow.mapSize.width = 2048;
+            directionalLight.shadow.mapSize.height = 2048;
+            scene.add(directionalLight);
+            
+            // Ground
+            const groundGeometry = new THREE.PlaneGeometry(20, 20);
+            const groundMaterial = new THREE.MeshLambertMaterial({ color: 0x2d3748 });
+            const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+            ground.rotation.x = -Math.PI / 2;
+            ground.receiveShadow = true;
+            scene.add(ground);
+            
+            // Grid
+            const gridHelper = new THREE.GridHelper(20, 40, 0x4a5568, 0x374151);
+            scene.add(gridHelper);
+            
+            createObjects();
+        }
+        
+        function createObjects() {
+            // Chassis (moving platform)
+            const chassisGeometry = new THREE.BoxGeometry(0.8, 0.3, 1.2);
+            const chassisMaterial = new THREE.MeshLambertMaterial({ color: 0x4a5568 });
+            chassis = new THREE.Mesh(chassisGeometry, chassisMaterial);
+            chassis.position.set(0, 0.15, 0);
+            chassis.castShadow = true;
+            scene.add(chassis);
+            
+            // Turntable (on top of chassis)
+            const turntableGeometry = new THREE.CylinderGeometry(0.3, 0.3, 0.1, 16);
+            const turntableMaterial = new THREE.MeshLambertMaterial({ color: 0x6b7280 });
+            turntable = new THREE.Mesh(turntableGeometry, turntableMaterial);
+            turntable.position.set(0, 0.35, 0);
+            turntable.castShadow = true;
+            scene.add(turntable);
+            
+            // Shooter mechanism
+            const shooterGeometry = new THREE.BoxGeometry(0.15, 0.15, 0.6);
+            const shooterMaterial = new THREE.MeshLambertMaterial({ color: 0xef4444 });
+            shooter = new THREE.Mesh(shooterGeometry, shooterMaterial);
+            shooter.position.set(0, 0.45, 0.2);
+            shooter.castShadow = true;
+            scene.add(shooter);
+            
+            // Projectile
+            const projectileGeometry = new THREE.SphereGeometry(0.012, 8, 8); // 2.4cm diameter
+            const projectileMaterial = new THREE.MeshLambertMaterial({ color: 0xf59e0b });
+            projectile = new THREE.Mesh(projectileGeometry, projectileMaterial);
+            projectile.position.set(0, 0.45, 0.5);
+            projectile.castShadow = true;
+            projectile.visible = false;
+            scene.add(projectile);
+            
+            // Goal post
+            createGoal();
+            
+            // Trajectory line
+            const trajectoryGeometry = new THREE.BufferGeometry();
+            const trajectoryMaterial = new THREE.LineBasicMaterial({ color: 0x5d5cde, linewidth: 2 });
+            trajectoryLine = new THREE.Line(trajectoryGeometry, trajectoryMaterial);
+            scene.add(trajectoryLine);
+        }
+        
+        function createGoal() {
+            const params = getParameters();
+            const goalDistance = params.goalDistance;
+            const goalHeight = params.goalHeight / 100;
+            const goalOpeningHeight = params.goalOpeningHeight / 100;
+            
+            // Goal post
+            const postGeometry = new THREE.BoxGeometry(0.1, goalHeight, 0.1);
+            const postMaterial = new THREE.MeshLambertMaterial({ color: 0x10b981 });
+            
+            const leftPost = new THREE.Mesh(postGeometry, postMaterial);
+            leftPost.position.set(goalDistance, goalHeight/2, -0.5);
+            leftPost.castShadow = true;
+            
+            const rightPost = new THREE.Mesh(postGeometry, postMaterial);
+            rightPost.position.set(goalDistance, goalHeight/2, 0.5);
+            rightPost.castShadow = true;
+            
+            // Goal opening
+            const openingGeometry = new THREE.PlaneGeometry(1, goalOpeningHeight);
+            const openingMaterial = new THREE.MeshBasicMaterial({ 
+                color: 0x10b981, 
+                transparent: true, 
+                opacity: 0.3,
+                side: THREE.DoubleSide
+            });
+            const opening = new THREE.Mesh(openingGeometry, openingMaterial);
+            opening.position.set(goalDistance, goalHeight - goalOpeningHeight/2, 0);
+            opening.rotation.y = Math.PI / 2;
+            
+            if (goal) {
+                scene.remove(goal);
+            }
+            
+            goal = new THREE.Group();
+            goal.add(leftPost);
+            goal.add(rightPost);
+            goal.add(opening);
+            scene.add(goal);
+        }
+        
+        function getParameters() {
+            return {
+                flywheelDiameter: parseFloat(document.getElementById('flywheelDiameter').value),
+                upperRPM: parseFloat(document.getElementById('upperRPM').value),
+                lowerRPM: parseFloat(document.getElementById('lowerRPM').value),
+                projectileDiameter: parseFloat(document.getElementById('projectileDiameter').value),
+                projectileMass: parseFloat(document.getElementById('projectileMass').value),
+                shooterAngle: parseFloat(document.getElementById('shooterAngle').value),
+                turntableHeight: parseFloat(document.getElementById('turntableHeight').value),
+                chassisSpeed: parseFloat(document.getElementById('chassisSpeed').value),
+                chassisDirection: parseFloat(document.getElementById('chassisDirection').value),
+                goalDistance: parseFloat(document.getElementById('goalDistance').value),
+                goalHeight: parseFloat(document.getElementById('goalHeight').value),
+                goalOpeningHeight: parseFloat(document.getElementById('goalOpeningHeight').value)
+            };
+        }
+        
+        function updateStatus(status, text) {
+            const indicator = document.getElementById('statusIndicator');
+            const statusText = document.getElementById('statusText');
+            
+            indicator.className = `status-indicator status-${status}`;
+            statusText.textContent = text;
+        }
+        
+        function calculateTrajectory() {
+            const params = getParameters();
+            const simulator = new TurntableShooterSimulator();
+            
+            // Calculate chassis velocity at shot time
+            const chassisAngleRad = (params.chassisDirection * Math.PI) / 180;
+            const chassisVelocityAtShot = {
+                x: params.chassisSpeed * Math.cos(chassisAngleRad),
+                y: 0,
+                z: -params.chassisSpeed * Math.sin(chassisAngleRad) // Negative because Z points toward camera
+            };
+            
+            // Calculate chassis position at shot time
+            const shootPosition = {
+                x: chassisStartPosition.x + chassisVelocityAtShot.x * shootTime,
+                y: 0,
+                z: chassisStartPosition.z + chassisVelocityAtShot.z * shootTime
+            };
+            
+            const results = simulator.simulate(params, chassisVelocityAtShot, shootPosition);
+            trajectoryData = results.trajectory;
+            
+            return results;
+        }
+        
+        function startAnimation() {
+            if (isAnimating) return;
+            
+            resetAnimation();
+            isAnimating = true;
+            animationTime = 0;
+            
+            // Calculate trajectory
+            const results = calculateTrajectory();
+            updateResults(results);
+            
+            updateStatus('moving', 'Chassis Moving');
+            animate();
+        }
+        
+        function pauseAnimation() {
+            isAnimating = false;
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+            }
+        }
+        
+        function resetAnimation() {
+            isAnimating = false;
+            animationTime = 0;
+            
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+            }
+            
+            // Reset positions
+            chassis.position.set(0, 0.15, 0);
+            turntable.position.set(0, 0.35, 0);
+            shooter.position.set(0, 0.45, 0.2);
+            projectile.position.set(0, 0.45, 0.5);
+            projectile.visible = false;
+            
+            // Clear trajectory
+            trajectoryLine.geometry.setFromPoints([]);
+            
+            // Reset turntable rotation
+            turntable.rotation.y = 0;
+            shooter.rotation.y = 0;
+            
+            updateStatus('ready', 'Ready');
+            document.getElementById('timeDisplay').textContent = '0.00s';
+        }
+        
+        function animate() {
+            if (!isAnimating) return;
+            
+            animationId = requestAnimationFrame(animate);
+            
+            const params = getParameters();
+            const deltaTime = 0.016; // ~60fps
+            animationTime += deltaTime;
+            
+            document.getElementById('timeDisplay').textContent = animationTime.toFixed(2) + 's';
+            
+            // Phase 1: Chassis movement (0 to shootTime)
+            if (animationTime <= shootTime) {
+                const chassisAngleRad = (params.chassisDirection * Math.PI) / 180;
+                const distance = params.chassisSpeed * animationTime;
+                
+                const newX = chassisStartPosition.x + distance * Math.cos(chassisAngleRad);
+                const newZ = chassisStartPosition.z - distance * Math.sin(chassisAngleRad);
+                
+                chassis.position.x = newX;
+                chassis.position.z = newZ;
+                turntable.position.x = newX;
+                turntable.position.z = newZ;
+                shooter.position.x = newX;
+                shooter.position.z = newZ + 0.2;
+                
+                // Rotate turntable to face goal
+                const goalX = params.goalDistance;
+                const goalZ = 0;
+                const angleToGoal = Math.atan2(goalZ - newZ, goalX - newX);
+                turntable.rotation.y = angleToGoal;
+                
+                // Set shooter rotation (horizontal toward goal) and tilt (elevation angle)
+                shooter.rotation.y = angleToGoal;
+                shooter.rotation.x = -(params.shooterAngle * Math.PI / 180); // Negative for upward tilt
+                
+                // Transition to shooting phase
+                if (animationTime >= shootTime - 0.1) {
+                    updateStatus('shooting', 'Firing!');
+                }
+            }
+            
+            // Phase 2: Projectile flight (after shootTime)
+            else {
+                const flightTime = animationTime - shootTime;
+                
+                if (flightTime === deltaTime) { // First frame of projectile flight
+                    projectile.visible = true;
+                    updateStatus('shooting', 'Projectile in Flight');
+                }
+                
+                // Continue chassis movement
+                const chassisAngleRad = (params.chassisDirection * Math.PI) / 180;
+                const totalDistance = params.chassisSpeed * animationTime;
+                
+                const chassisX = chassisStartPosition.x + totalDistance * Math.cos(chassisAngleRad);
+                const chassisZ = chassisStartPosition.z - totalDistance * Math.sin(chassisAngleRad);
+                
+                chassis.position.x = chassisX;
+                chassis.position.z = chassisZ;
+                turntable.position.x = chassisX;
+                turntable.position.z = chassisZ;
+                shooter.position.x = chassisX;
+                shooter.position.z = chassisZ + 0.2;
+                
+                // Update projectile position from trajectory data
+                const trajectoryIndex = Math.floor(flightTime / 0.001);
+                if (trajectoryIndex < trajectoryData.length) {
+                    const point = trajectoryData[trajectoryIndex];
+                    projectile.position.set(point.x, point.y, point.z);
+                    
+                    // Update trajectory line
+                    const points = [];
+                    for (let i = 0; i <= trajectoryIndex && i < trajectoryData.length; i++) {
+                        const p = trajectoryData[i];
+                        points.push(new THREE.Vector3(p.x, p.y, p.z));
+                    }
+                    trajectoryLine.geometry.setFromPoints(points);
+                } else {
+                    // Animation complete
+                    updateStatus('complete', 'Complete');
+                    isAnimating = false;
+                }
+            }
+            
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        
+        function updateResults(results) {
+            const params = getParameters();
+            const resultsDiv = document.getElementById('results');
+            
+            const spinDirection = results.initialData.spinRate > 0 ? 'Backspin' : 
+                                 results.initialData.spinRate < 0 ? 'Topspin' : 'No Spin';
+            
+            resultsDiv.innerHTML = `
+                <div class="bg-gray-700 p-4 rounded">
+                    <h3 class="font-semibold text-blue-400">Launch Speed</h3>
+                    <p class="text-lg">${results.initialData.speed.toFixed(2)} m/s</p>
+                    <p class="text-sm text-gray-300">Shooter: ${results.initialData.shooterSpeed.toFixed(2)} m/s</p>
+                </div>
+                
+                <div class="bg-gray-700 p-4 rounded">
+                    <h3 class="font-semibold text-purple-400">Spin Rate</h3>
+                    <p class="text-lg">${Math.abs(results.initialData.spinRate * 60 / (2 * Math.PI)).toFixed(0)} RPM</p>
+                    <p class="text-sm text-gray-300">${spinDirection}</p>
+                </div>
+                
+                <div class="bg-gray-700 p-4 rounded">
+                    <h3 class="font-semibold text-yellow-400">Max Height</h3>
+                    <p class="text-lg">${(results.maxHeight * 100).toFixed(1)} cm</p>
+                </div>
+                
+                <div class="bg-gray-700 p-4 rounded">
+                    <h3 class="font-semibold text-cyan-400">Flight Time</h3>
+                    <p class="text-lg">${results.flightTime.toFixed(3)} s</p>
+                </div>
+                
+                <div class="bg-gray-700 p-4 rounded">
+                    <h3 class="font-semibold text-orange-400">Chassis Info</h3>
+                    <p class="text-sm text-gray-300">Speed: ${params.chassisSpeed} m/s</p>
+                    <p class="text-sm text-gray-300">Direction: ${params.chassisDirection}°</p>
+                    <p class="text-sm text-gray-300">Shot Time: ${shootTime}s</p>
+                </div>
+                
+                <div class="bg-gray-700 p-4 rounded">
+                    <h3 class="font-semibold text-red-400">Turntable & Shooter</h3>
+                    <p class="text-sm text-gray-300">Height: ${params.turntableHeight} cm</p>
+                    <p class="text-sm text-gray-300">Shooter Angle: ${params.shooterAngle}°</p>
+                    <p class="text-sm text-gray-300">Always faces goal</p>
+                </div>
+            `;
+        }
+        
+        // Event listeners
+        document.getElementById('startBtn').addEventListener('click', startAnimation);
+        document.getElementById('pauseBtn').addEventListener('click', pauseAnimation);
+        document.getElementById('resetBtn').addEventListener('click', resetAnimation);
+        
+        // Parameter change listeners
+        ['goalDistance', 'goalHeight', 'goalOpeningHeight'].forEach(id => {
+            document.getElementById(id).addEventListener('change', () => {
+                createGoal();
+                renderer.render(scene, camera);
+            });
+        });
+        
+        // Window resize handler
+        window.addEventListener('resize', () => {
+            const container = document.getElementById('canvas-container');
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+            
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+            renderer.setSize(width, height);
+        });
+        
+        // Initialize everything
+        initThreeJS();
+        
+        // Start render loop
+        function renderLoop() {
+            requestAnimationFrame(renderLoop);
+            if (!isAnimating) {
+                controls.update();
+                renderer.render(scene, camera);
+            }
+        }
+        renderLoop();
+        
+        // Calculate initial trajectory for display
+        setTimeout(() => {
+            const results = calculateTrajectory();
+            updateResults(results);
+        }, 100);
+    </script>
+
+
+</body></html>
